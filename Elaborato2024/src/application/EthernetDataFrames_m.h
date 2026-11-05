@@ -38,13 +38,13 @@ class TSNBindCommand;
 namespace inet {
 
 /**
- * Class generated from <tt>application/EthernetDataFrames.msg:9</tt> by opp_msgtool.
+ * Class generated from <tt>application/EthernetDataFrames.msg:10</tt> by opp_msgtool.
  * <pre>
  * class EthernetDataPayload extends inet::FieldsChunk
  * {
- *     int frame_num;
- *     int burst_size;
- *     simtime_t genTime;
+ *     int frame_num;      // Zero-based index of the frame within the burst.
+ *     int burst_size;     // Total number of frames in the burst.
+ *     simtime_t genTime;  // Simulation time at which the frame was generated.
  * }
  * </pre>
  */
@@ -84,11 +84,11 @@ inline void doParsimPacking(omnetpp::cCommBuffer *b, const EthernetDataPayload& 
 inline void doParsimUnpacking(omnetpp::cCommBuffer *b, EthernetDataPayload& obj) {obj.parsimUnpack(b);}
 
 /**
- * Class generated from <tt>application/EthernetDataFrames.msg:15</tt> by opp_msgtool.
+ * Class generated from <tt>application/EthernetDataFrames.msg:17</tt> by opp_msgtool.
  * <pre>
  * class TSNBindCommand extends SocketBindCommand
  * {
- *     string flowName; // la bind viene fatta sul nome del flusso
+ *     string flowName; // Name of the flow to which the socket is bound.
  * }
  * </pre>
  */

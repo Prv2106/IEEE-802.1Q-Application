@@ -1,4 +1,7 @@
 #!/bin/sh
+# Launches the simulation with the local executable.
+# The NED search path includes the current directory and ../src.
 cd `dirname $0`
 ../src/elaborato2024 -n .:../src $*
-# for shared lib, use: opp_run -l ../src/elaborato2024 -n .:../src $*
+# For a shared-library build, use:
+# opp_run -l ../src/elaborato2024 -n .:../src $*

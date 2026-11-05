@@ -8,6 +8,10 @@ import inet.node.inet.StandardHost;
 import inet.node.tsn.TsnSwitch;
 
 
+// Automotive Ethernet test network.
+//
+// Connects TSN end devices through two TSN switches using 100 Mbps
+// point-to-point links.
 network TestNet extends WiredNetworkBase
 {
     parameters:
@@ -15,6 +19,7 @@ network TestNet extends WiredNetworkBase
         **.bitrate = default(100Mbps);
     submodules:
 
+        // TSN end devices.
         LD2: TsnDevice {
             @display("p=258.5,105.468");
         }
@@ -69,6 +74,7 @@ network TestNet extends WiredNetworkBase
         US4: TsnDevice {
             @display("p=843.1225,417.8525");
         }
+        // TSN switches.
         SW1: TsnSwitch {
             @display("p=442.552,249.194");
         }
@@ -76,6 +82,7 @@ network TestNet extends WiredNetworkBase
             @display("p=718.63,249.194");
         }
     connections:
+        // 100 Mbps point-to-point links.
         LD2.ethg++ <--> Eth100M <--> SW1.ethg++;
         SW1.ethg++ <--> Eth100M <--> CU.ethg++;
         LD1.ethg++ <--> Eth100M <--> SW1.ethg++;

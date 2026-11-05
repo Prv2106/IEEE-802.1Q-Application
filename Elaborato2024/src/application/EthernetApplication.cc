@@ -1,3 +1,8 @@
+/**
+ * @file EthernetApplication.cc
+ * @brief Implementation of the periodic TSN traffic source and sink.
+ */
+
 #include "EthernetApplication.h"
 #include "EthernetDataFrames_m.h"
 #include "inet/common/packet/Packet.h"
@@ -14,6 +19,12 @@
 
 Define_Module(EthernetApplication);
 
+/**
+ * Initializes the socket callback and output gate, resolves the local and
+ * remote MAC addresses, and locates the egress network interface.
+ *
+ * @param stage Current initialization stage.
+ */
 void EthernetApplication::initialize(int stage) {
     ApplicationBase::initialize(stage);
 
@@ -52,6 +63,16 @@ void EthernetApplication::initialize(int stage) {
     }
 }
 
+/**
+ * Dispatches self-messages, frame-generation timers, inter-arrival
+ * timers, and messages received from the socket.
+ *
+ * The first generation is triggered by StartTimer. GenTimer then triggers
+ * subsequent generations, while InterTimer resumes transmission after the
+ * configured inter-arrival time.
+ *
+ * @param msg Message to process.
+ */
 void EthernetApplication::handleMessageWhenUp(cMessage *msg) {
     if(msg->isSelfMessage()) {
         if(strcmp(msg->getName(), "StartTimer") ==  0) {
@@ -81,6 +102,15 @@ void EthernetApplication::handleMessageWhenUp(cMessage *msg) {
     delete msg;
 }
 
+/**
+ * Generates one burst of frames and enqueues them for transmission.
+ *
+ * The payload is split into frames whose size does not exceed the configured
+ * MTU. Every frame is tagged with the VLAN identifier, priority code point,
+ * destination MAC address, and egress interface. The frame index, total burst
+ * size, and generation time are stored in the payload so that the receiver can
+ * compute burst-level and frame-level statistics.
+ */
 void EthernetApplication::generateFrames() {
     int remLen = par("payload");
     int mtu = par("mtu");
@@ -113,11 +143,21 @@ void EthernetApplication::generateFrames() {
         remLen -= len;
     }
 
-    transmitFrames(); //FIXME Si assume che la trasmissione del burst termini prima del periodo
+    transmitFrames();
+    // NOTE: The burst transmission is assumed to complete before the next period.
 }
 
+/**
+ * Consumes a frame delivered by the socket and emits delay and jitter
+ * statistics.
+ *
+ * BurstDelay is emitted only for the last frame of a burst. FrameDelay and
+ * AbsoluteJitter are emitted for every received frame.
+ *
+ * @param socket Socket that delivered the frame.
+ * @param pkt Received frame; ownership is transferred to the callee.
+ */
 void EthernetApplication::socketDataArrived(TSNSocket *socket, Packet *pkt) {
-    /* Messaggio dalla rete */
     EV << "Arrivato pacchetto: " << pkt->getName() << endl;
     auto pay = pkt->peekAtFront<EthernetDataPayload>();
     int bs = pay->getBurst_size();
@@ -138,7 +178,6 @@ void EthernetApplication::socketDataArrived(TSNSocket *socket, Packet *pkt) {
     sig = registerSignal("FrameDelay");
     emit(sig, e2ed);
 
-// Emissione jitter assoluto
     absoluteJitter = registerSignal("AbsoluteJitter");
     aJitter = getAbsolutejitter(e2ed);
     emit(absoluteJitter,aJitter);
@@ -146,8 +185,13 @@ void EthernetApplication::socketDataArrived(TSNSocket *socket, Packet *pkt) {
     delete pkt;
 }
 
-
-// Calcolo del jitter assoluto
+/**
+ * Updates the observed end-to-end delay range and returns the difference
+ * between the maximum and minimum delays.
+ *
+ * @param e2ed End-to-end delay of the current frame.
+ * @return Absolute jitter observed so far.
+ */
 simtime_t EthernetApplication ::getAbsolutejitter(simtime_t e2ed) {
     if(e2ed < e2edMin)
         e2edMin = e2ed;
@@ -158,12 +202,19 @@ simtime_t EthernetApplication ::getAbsolutejitter(simtime_t e2ed) {
     return (e2edMax - e2edMin);
 
 }
+
+/**
+ * Transmits queued frames, enforcing the configured inter-arrival time.
+ *
+ * If the inter-arrival time is zero, the next frame is transmitted
+ * immediately through a recursive call. Otherwise, an InterTimer message is
+ * scheduled to resume transmission later.
+ */
 void EthernetApplication::transmitFrames() {
     simtime_t it = par("interarrivalTime");
     if(!queue.isEmpty()) {
         auto pkt = queue.pop();
         socket.send(check_and_cast<Packet *>(pkt));
-        //send(pkt, "socketOut");
 
         if(!queue.isEmpty()) {
             if(it == 0) {
@@ -176,6 +227,12 @@ void EthernetApplication::transmitFrames() {
     }
 }
 
+/**
+ * Binds the socket to the configured flow name and schedules the first
+ * frame-generation timer.
+ *
+ * @param operation Lifecycle operation that triggered the start.
+ */
 void EthernetApplication::handleStartOperation(LifecycleOperation *operation) {
     simtime_t stime = par("startTime");
 
@@ -187,10 +244,24 @@ void EthernetApplication::handleStartOperation(LifecycleOperation *operation) {
     }
 }
 
+/**
+ * Handles a graceful stop operation.
+ *
+ * No module-specific cleanup is required.
+ *
+ * @param operation Lifecycle operation that triggered the stop.
+ */
 void EthernetApplication::handleStopOperation(LifecycleOperation *operation) {
 
 }
 
+/**
+ * Handles a crash operation.
+ *
+ * No module-specific cleanup is required.
+ *
+ * @param operation Lifecycle operation that triggered the crash.
+ */
 void EthernetApplication::handleCrashOperation(LifecycleOperation *operation) {
 
 }
